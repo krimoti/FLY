@@ -460,9 +460,28 @@ function checkLic(){
 }
 function hasValidLic(){try{const s=JSON.parse(localStorage.getItem('sky_lic')||'{}');return s.did===DID&&Date.now()<s.exp;}catch(e){return false;}}
 function copyDid(){navigator.clipboard?.writeText(DID).then(()=>toast('📋 מזהה הועתק!')).catch(()=>toast(DID));}
-function launchApp(){document.getElementById('gate').classList.remove('show');document.getElementById('app').classList.add('show');try{load();BGM.init();}catch(err){console.error('Launch error:',err);}}
-document.getElementById('lic-in').addEventListener('keydown',e=>{if(e.key==='Enter')checkLic();});
+function launchApp(){
+  document.getElementById('gate').classList.remove('show');
+  document.getElementById('app').classList.add('show');
+  try{load();BGM.init();}catch(err){console.error('Launch error:',err);}
+  revalidateInBackground();
+}
 
+function revalidateInBackground(){
+  try{
+    const s=JSON.parse(localStorage.getItem('sky_lic')||'{}');
+    if(!s.code||!s.did)return;
+    fetch(`${SCRIPT_URL}?action=verify&code=${encodeURIComponent(s.code)}&device=${DID}`,{method:'GET',mode:'cors'})
+      .then(r=>r.json())
+      .then(d=>{
+        if(!d.valid){
+          localStorage.removeItem('sky_lic');
+          console.warn('הרישיון נחסם — ינדרש קוד חדש בהפעלה הבאה');
+        }
+      })
+      .catch(()=>{ /* אין אינטרנט כרגע — ממשיכים לעבוד עם הקאש כרגיל */ });
+  }catch(e){}
+}
 /* ══ SPLASH ══ */
 (function(){const c=document.getElementById('sc');for(let i=0;i<80;i++){const s=document.createElement('div');s.className='star';const sz=Math.random()*2.5+.5;s.style.cssText=`width:${sz}px;height:${sz}px;top:${Math.random()*100}%;left:${Math.random()*100}%;animation-duration:${2+Math.random()*3}s;animation-delay:${-Math.random()*5}s;`;c.appendChild(s);}})();
 setTimeout(()=>{
